@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// System Roles for Authenticated Users
+enum Role {
+  ADMIN
+  SUPERVISOR
+}
+
+/// User accounts that access the ERP system
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  password    String       // Hashed password
+  role        Role         @default(SUPERVISOR)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  permissions Permission[]
+  auditLogs   AuditLog[]
+}
+
+/// ERP Modules which have restricted access
+model Module {
+  id          String       @id @default(cuid())
+  name        String       @unique // e.g. "Inventory", "Employees", "Projects", "Salary", "AuditLogs"
+  permissions Permission[]
+}
+
+/// Access Permissions mapping Users to ERP Modules
+model Permission {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  canRead   Boolean  @default(false)
+  canWrite  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, moduleId]) // Ensures single permission mapping per user per module
+}
+
+/// Construction Employees database
+model Employee {
+  id            String         @id @default(cuid())
+  name          String
+  phone         String
+  role          String         // e.g. "Project Manager", "Laborer", "Mason", "Electrician"
+  salaryType    String         // e.g. "MONTHLY", "DAILY", "HOURLY"
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  attendance    Attendance[]
+  salaryRecords SalaryRecord[]
+}
+
+/// Construction Project Sites
+model Project {
+  id             String          @id @default(cuid())
+  name           String
+  location       String
+  status         String          // e.g. "PLANNING", "IN_PROGRESS", "COMPLETED", "ON_HOLD"
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  inventoryItems InventoryItem[]
+}
+
+/// Building Material & Inventory Items
+model InventoryItem {
+  id        String   @id @default(cuid())
+  name      String
+  quantity  Float    // Float supports fractional measurements like 10.5 tons or 4.5 bags
+  unit      String   // e.g. "tons", "bags", "meters", "pieces"
+  projectId String?  // Optional: Items can be in main warehouse (null) or assigned to a project site
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Employee Daily Attendance Logs
+model Attendance {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       DateTime // Midnight normalized date
+  status     String   // e.g. "PRESENT", "ABSENT", "LATE", "LEAVE"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, date]) // Ensures an employee has exactly one attendance status per day
+}
+
+/// Employee Payroll Records
+model SalaryRecord {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  month       String   // Format: "YYYY-MM"
+  totalSalary Float    // Calculated amount
+  paidStatus  String   // e.g. "PAID", "UNPAID", "PENDING"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([employeeId, month]) // Ensures only one payroll record per employee per month
+}
+
+/// Comprehensive System Audit Logs for security and activity tracking
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // Nullable: keeps audit log if user account is deleted
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "CREATE_EMPLOYEE", "UPDATE_INVENTORY", "APPROVE_SALARY"
+  module    String   // e.g. "Inventory", "Employees", "Projects", "Salary", "AuditLogs"
+  timestamp DateTime @default(now())
+  details   Json?    // Detailed payload tracking changes (e.g. before/after states)
+}
