@@ -14,9 +14,9 @@ if (!connectionString) {
 
 const pool = new Pool({ 
   connectionString,
-  max: process.env.NODE_ENV === 'production' ? 10 : 2, // Moderate connection pool limits for serverless environment
+  max: process.env.NODE_ENV === 'production' ? 15 : 4, // Robust pool limits
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 20000, // Resilient 20s timeout for Neon wake-ups
 });
 
 const adapter = new PrismaPg(pool);
@@ -25,7 +25,7 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
 if (process.env.NODE_ENV !== 'production') {

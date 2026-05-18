@@ -53,7 +53,7 @@ export async function GET(req: Request) {
       include: { module: true },
     });
 
-    const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p) => {
+    const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p: any) => {
       acc[p.module.name] = { read: p.canRead, write: p.canWrite };
       return acc;
     }, {});
@@ -246,7 +246,7 @@ export async function POST(req: Request) {
         include: { module: true },
       });
 
-      const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p) => {
+      const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p: any) => {
         acc[p.module.name] = { read: p.canRead, write: p.canWrite };
         return acc;
       }, {});
