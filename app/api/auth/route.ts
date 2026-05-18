@@ -53,10 +53,10 @@ export async function GET(req: Request) {
       include: { module: true },
     });
 
-    const permissions = dbPermissions.reduce((acc, p) => {
+    const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p) => {
       acc[p.module.name] = { read: p.canRead, write: p.canWrite };
       return acc;
-    }, {} as Record<string, { read: boolean; write: boolean }>);
+    }, {});
 
     if (user.role === 'ADMIN') {
       for (const mod of ERP_MODULES) {
@@ -246,10 +246,10 @@ export async function POST(req: Request) {
         include: { module: true },
       });
 
-      const permissions = dbPermissions.reduce((acc, p) => {
+      const permissions = dbPermissions.reduce((acc: Record<string, { read: boolean; write: boolean }>, p) => {
         acc[p.module.name] = { read: p.canRead, write: p.canWrite };
         return acc;
-      }, {} as Record<string, { read: boolean; write: boolean }>);
+      }, {});
 
       // If user is ADMIN, grant full read/write bypass for all modules in frontend state
       if (user.role === 'ADMIN') {
