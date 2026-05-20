@@ -92,7 +92,7 @@ export default function LoginPage() {
       {/* Login Card Container */}
       <div className="w-full max-w-md z-10">
         <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl flex flex-col gap-6 relative">
-          
+
           {/* Brand Header */}
           <div className="text-center flex flex-col gap-2">
             <div className="inline-flex items-center justify-center self-center w-14 h-14 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 text-slate-950 font-black text-2xl tracking-tighter shadow-lg shadow-amber-600/20">
