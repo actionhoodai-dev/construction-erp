@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     });
 
     // 5. Format results to return a simplified shape
-    const formattedWorkforce = employees.map((emp) => {
+    const formattedWorkforce = employees.map((emp: any) => {
       const dailyLog = emp.attendance[0] || null;
       return {
         id: emp.id,
