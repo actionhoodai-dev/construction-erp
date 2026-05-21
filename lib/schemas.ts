@@ -55,3 +55,17 @@ export const loginSchema = z.object({
   email: z.string().trim().email('Invalid email address.'),
   password: z.string().min(1, 'Password is required.'),
 });
+
+/**
+ * Zod validation schema for daily attendance checks
+ */
+export const dailyAttendanceSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format.'),
+  records: z.array(
+    z.object({
+      employeeId: z.string().cuid('Employee ID must be a valid CUID.'),
+      status: z.enum(['PRESENT', 'ABSENT', 'LATE', 'LEAVE']),
+    })
+  ),
+});
+
