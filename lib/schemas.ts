@@ -69,3 +69,30 @@ export const dailyAttendanceSchema = z.object({
   ),
 });
 
+/**
+ * Zod validation schema for creating a supervisor
+ */
+export const supervisorCreateSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required.'),
+  email: z.string().trim().email('Invalid email address.'),
+  password: z.string().min(6, 'Password must be at least 6 characters.'),
+});
+
+/**
+ * Zod validation schema for updating a supervisor
+ */
+export const supervisorUpdateSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required.').optional(),
+  email: z.string().trim().email('Invalid email address.').optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters.').optional(),
+  isActive: z.boolean().optional(),
+  permissions: z.array(
+    z.object({
+      moduleId: z.string().cuid('Module ID must be a valid CUID.'),
+      canRead: z.boolean(),
+      canWrite: z.boolean(),
+    })
+  ).optional(),
+});
+
+

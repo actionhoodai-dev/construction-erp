@@ -47,6 +47,12 @@ export async function isAuthorized(
   if (user.role === 'ADMIN') return true; // Server-side admin global bypass
   
   if (user.role === 'SUPERVISOR') {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { isActive: true },
+    });
+    if (!dbUser || !dbUser.isActive) return false;
+
     const permissions = await getUserPermissions(user.userId);
     const perm = permissions[moduleName];
     if (!perm) return false;

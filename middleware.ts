@@ -40,6 +40,14 @@ export async function middleware(req: NextRequest) {
   }
 
   // 5. Enforce middleware-level dashboard role guards
+  if (pathname.startsWith('/dashboard/supervisors') && decoded.role !== 'ADMIN') {
+    return NextResponse.redirect(new URL('/dashboard/supervisor', req.url));
+  }
+
+  if (pathname.startsWith('/api/supervisors') && decoded.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Forbidden: Insufficient privileges.' }, { status: 403 });
+  }
+
   if (pathname.startsWith('/dashboard/admin') && decoded.role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/dashboard/supervisor', req.url));
   }

@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       where: { id: decoded.userId },
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
@@ -221,6 +221,13 @@ export async function POST(req: Request) {
         return NextResponse.json(
           { error: 'Invalid email or password' },
           { status: 401 }
+        );
+      }
+
+      if (!user.isActive) {
+        return NextResponse.json(
+          { error: 'Forbidden: Your account has been deactivated.' },
+          { status: 403 }
         );
       }
 
