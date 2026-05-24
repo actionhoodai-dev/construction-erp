@@ -52,7 +52,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/supervisor', req.url));
   }
 
-  if (pathname.startsWith('/dashboard/supervisor') && decoded.role !== 'SUPERVISOR') {
+  if ((pathname === '/dashboard/supervisor' || pathname.startsWith('/dashboard/supervisor/')) && decoded.role !== 'SUPERVISOR') {
     return NextResponse.redirect(new URL('/dashboard/admin', req.url));
   }
 
