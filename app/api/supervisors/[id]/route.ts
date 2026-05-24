@@ -57,13 +57,14 @@ export async function PATCH(req: Request, context: RouteContext) {
       );
     }
 
-    const { name, email, password, isActive, permissions } = validation.data;
+    const { name, email, password, isActive, projectId, permissions } = validation.data;
 
     // 5. Build dynamic update model payload
-    const updateData: any = {};
+    const updateData: Record<string, string | boolean | null> = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (projectId !== undefined) updateData.projectId = projectId;
     if (password !== undefined && password.trim() !== '') {
       updateData.password = await hashPassword(password);
     }
@@ -114,6 +115,7 @@ export async function PATCH(req: Request, context: RouteContext) {
         nameUpdated: name !== undefined,
         emailUpdated: email !== undefined,
         statusUpdated: isActive !== undefined,
+        projectIdUpdated: projectId !== undefined,
         passwordUpdated: password !== undefined,
         permissionsCount: permissions?.length || 0,
       },

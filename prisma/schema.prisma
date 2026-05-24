@@ -27,6 +27,10 @@ model User {
   updatedAt   DateTime     @updatedAt
   permissions Permission[]
   auditLogs   AuditLog[]
+  
+  // Project Site Assignment relation
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
 }
 
 /// ERP Modules which have restricted access
@@ -73,6 +77,7 @@ model Project {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   inventoryItems InventoryItem[]
+  supervisors    User[]
 }
 
 /// Building Material & Inventory Items

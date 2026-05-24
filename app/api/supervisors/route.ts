@@ -8,7 +8,7 @@ import { supervisorCreateSchema } from '@/lib/schemas';
 /**
  * GET - Retrieve all supervisors and their permissions (Admin only)
  */
-export async function GET(req: Request) {
+export async function GET() {
   try {
     // 1. Authenticate user from secure context
     const currentUser = await getUserFromRequest();
@@ -27,8 +27,8 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3. Fetch all supervisors and system modules from DB
-    const [supervisors, modules] = await Promise.all([
+    // 3. Fetch all supervisors, system modules, and project sites from DB
+    const [supervisors, modules, projects] = await Promise.all([
       prisma.user.findMany({
         where: { role: 'SUPERVISOR' },
         orderBy: { createdAt: 'desc' },
@@ -38,6 +38,14 @@ export async function GET(req: Request) {
           email: true,
           isActive: true,
           createdAt: true,
+          projectId: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              location: true,
+            },
+          },
           permissions: {
             select: {
               id: true,
@@ -56,9 +64,17 @@ export async function GET(req: Request) {
       prisma.module.findMany({
         orderBy: { name: 'asc' },
       }),
+      prisma.project.findMany({
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          location: true,
+        },
+      }),
     ]);
 
-    return NextResponse.json({ supervisors, modules }, { status: 200 });
+    return NextResponse.json({ supervisors, modules, projects }, { status: 200 });
   } catch (error: unknown) {
     const err = error as Error;
     console.error('Supervisors GET handler error:', err);
@@ -101,7 +117,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password } = validation.data;
+    const { name, email, password, projectId } = validation.data;
 
     // 4. Prevent duplicate user accounts
     const existingUser = await prisma.user.findUnique({
@@ -128,6 +144,7 @@ export async function POST(req: Request) {
           password: hashedPassword,
           role: 'SUPERVISOR',
           isActive: true,
+          projectId: projectId || null,
         },
       });
 
@@ -154,6 +171,7 @@ export async function POST(req: Request) {
       supervisorId: newSupervisor.id,
       supervisorEmail: newSupervisor.email,
       supervisorName: newSupervisor.name,
+      assignedProjectId: projectId || null,
     });
 
     return NextResponse.json(

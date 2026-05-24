@@ -20,6 +20,12 @@ interface Supervisor {
   email: string;
   isActive: boolean;
   createdAt: string;
+  projectId: string | null;
+  project?: {
+    id: string;
+    name: string;
+    location: string;
+  } | null;
   permissions: PermissionRecord[];
 }
 
@@ -28,12 +34,19 @@ interface ERPModule {
   name: string;
 }
 
+interface ProjectSite {
+  id: string;
+  name: string;
+  location: string;
+}
+
 export default function SupervisorsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [modules, setModules] = useState<ERPModule[]>([]);
+  const [projects, setProjects] = useState<ProjectSite[]>([]);
   const [uiLoading, setUiLoading] = useState(true);
 
   // Form states
@@ -43,16 +56,19 @@ export default function SupervisorsPage() {
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editPermsModalOpen, setEditPermsModalOpen] = useState(false);
+  const [assignProjectModalOpen, setAssignProjectModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   // Form payloads
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newProjectId, setNewProjectId] = useState('');
   
   // Selected target for edits/deletions
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [selectedPerms, setSelectedPerms] = useState<Record<string, { canRead: boolean; canWrite: boolean }>>({});
+  const [targetProjectId, setTargetProjectId] = useState('');
 
   // Operation flags
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +84,7 @@ export default function SupervisorsPage() {
     }
   }, [isAdmin, loading, router]);
 
-  // Fetch supervisors directory and module index
+  // Fetch supervisors directory, module index, and projects
   const fetchData = async () => {
     try {
       setUiLoading(true);
@@ -80,6 +96,7 @@ export default function SupervisorsPage() {
       const data = await res.json();
       setSupervisors(data.supervisors || []);
       setModules(data.modules || []);
+      setProjects(data.projects || []);
     } catch (err: unknown) {
       const errorVal = err as Error;
       console.error(errorVal);
@@ -129,7 +146,7 @@ export default function SupervisorsPage() {
     setSuccess('');
     
     if (!newName || !newEmail || !newPassword) {
-      setError('All fields are required.');
+      setError('All credential fields are required.');
       return;
     }
 
@@ -143,7 +160,12 @@ export default function SupervisorsPage() {
       const res = await fetch('/api/supervisors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName, email: newEmail, password: newPassword }),
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          password: newPassword,
+          projectId: newProjectId || null,
+        }),
       });
 
       const data = await res.json();
@@ -158,6 +180,7 @@ export default function SupervisorsPage() {
       setNewName('');
       setNewEmail('');
       setNewPassword('');
+      setNewProjectId('');
 
       // Reload
       fetchData();
@@ -191,6 +214,47 @@ export default function SupervisorsPage() {
     } catch (err: unknown) {
       const errorVal = err as Error;
       setError(errorVal.message || 'Operation failed.');
+    }
+  };
+
+  // Prepare Project Site Assignment Modal
+  const openAssignProject = (supervisor: Supervisor) => {
+    setSelectedSupervisor(supervisor);
+    setTargetProjectId(supervisor.projectId || '');
+    setError('');
+    setSuccess('');
+    setAssignProjectModalOpen(true);
+  };
+
+  // Handle Project Assignment
+  const handleAssignProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSupervisor) return;
+
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await fetch(`/api/supervisors/${selectedSupervisor.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: targetProjectId || null }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to assign project site.');
+      }
+
+      setSuccess(`Project site assignment updated successfully for ${selectedSupervisor.name}.`);
+      setAssignProjectModalOpen(false);
+      fetchData();
+    } catch (err: unknown) {
+      const errorVal = err as Error;
+      setError(errorVal.message || 'Operation failed.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -340,7 +404,7 @@ export default function SupervisorsPage() {
             Supervisor Management & Permissions
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Create supervisor records, assign granular module accesses, and monitor account credentials.
+            Create supervisor records, assign project sites, control credentials, and assign module rights.
           </p>
         </div>
 
@@ -446,6 +510,7 @@ export default function SupervisorsPage() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider">
                 <th className="py-4.5 px-6">Supervisor Info</th>
+                <th className="py-4.5 px-6">Assigned Site</th>
                 <th className="py-4.5 px-6">Account Status</th>
                 <th className="py-4.5 px-6">Registered On</th>
                 <th className="py-4.5 px-6 text-right">Actions</th>
@@ -454,7 +519,7 @@ export default function SupervisorsPage() {
             <tbody className="divide-y divide-slate-100 font-medium">
               {filteredSupervisors.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-16 text-center text-slate-400 font-bold">
+                  <td colSpan={5} className="py-16 text-center text-slate-400 font-bold">
                     No supervisors matched your active filters.
                   </td>
                 </tr>
@@ -472,6 +537,24 @@ export default function SupervisorsPage() {
                           <div className="text-[10px] text-slate-400 font-medium mt-0.5">{s.email}</div>
                         </div>
                       </div>
+                    </td>
+
+                    {/* Assigned Project Site */}
+                    <td className="py-4.5 px-6">
+                      {s.project ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-extrabold text-slate-800 text-xs">
+                            {s.project.name}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-medium">
+                            📍 {s.project.location}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic font-medium">
+                          Unassigned
+                        </span>
+                      )}
                     </td>
 
                     {/* Account status flag pill */}
@@ -501,7 +584,18 @@ export default function SupervisorsPage() {
                     {/* Operational controls */}
                     <td className="py-4.5 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* 1. Permissions edit trigger */}
+                        {/* 1. Project Assignment Trigger */}
+                        <button
+                          onClick={() => openAssignProject(s)}
+                          className="p-2 rounded-xl border border-slate-200 text-slate-500 bg-white hover:bg-slate-50 hover:text-amber-600 transition-all outline-none"
+                          title="Assign Project Site"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </button>
+
+                        {/* 2. Permissions edit trigger */}
                         <button
                           onClick={() => openEditPermissions(s)}
                           className="p-2 rounded-xl border border-slate-200 text-slate-500 bg-white hover:bg-slate-50 hover:text-amber-600 transition-all outline-none"
@@ -512,7 +606,7 @@ export default function SupervisorsPage() {
                           </svg>
                         </button>
 
-                        {/* 2. Permanent Account Cleanup */}
+                        {/* 3. Permanent Account Cleanup */}
                         <button
                           onClick={() => triggerDeleteConfirm(s)}
                           className="p-2 rounded-xl border border-slate-200 text-slate-400 bg-white hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all outline-none"
@@ -548,7 +642,7 @@ export default function SupervisorsPage() {
 
             <h3 className="text-base font-black text-slate-900 tracking-tight">Create Supervisor Account</h3>
             <p className="text-slate-500 text-[11px] mt-1">
-              Add a new operational account to the ConstruxERP registry. Credentials can be modified or disabled by admins anytime.
+              Add a new supervisor account and optional site assignment. Credentials can be shared with the supervisor.
             </p>
 
             <form onSubmit={handleCreateSupervisor} className="mt-5 space-y-4">
@@ -585,6 +679,22 @@ export default function SupervisorsPage() {
                 />
               </div>
 
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Assign Project Site</label>
+                <select
+                  value={newProjectId}
+                  onChange={(e) => setNewProjectId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl px-4 py-2.5 outline-none focus:bg-white focus:border-amber-500/50 shadow-inner font-medium transition-all"
+                >
+                  <option value="">-- Select Project Site (Optional) --</option>
+                  {projects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name} ({proj.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
@@ -599,6 +709,63 @@ export default function SupervisorsPage() {
                   className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-sm outline-none transition-all"
                 >
                   {submitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN PROJECT MODAL */}
+      {assignProjectModalOpen && selectedSupervisor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-white border border-slate-200 w-full max-w-md rounded-2xl shadow-2xl p-6 relative">
+            
+            <button
+              onClick={() => setAssignProjectModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-base font-black text-slate-900 tracking-tight">Assign Project Site</h3>
+            <p className="text-slate-500 text-[11px] mt-1">
+              Select the active construction site assigned to <strong className="text-slate-800 font-bold">{selectedSupervisor.name}</strong>.
+            </p>
+
+            <form onSubmit={handleAssignProject} className="mt-5 space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1.5">Project Site</label>
+                <select
+                  value={targetProjectId}
+                  onChange={(e) => setTargetProjectId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl px-4 py-2.5 outline-none focus:bg-white focus:border-amber-500/50 shadow-inner font-medium transition-all"
+                >
+                  <option value="">-- Unassigned / Central Warehouse --</option>
+                  {projects.map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name} ({proj.location})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setAssignProjectModalOpen(false)}
+                  className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl outline-none transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 text-xs font-black px-4 py-2.5 rounded-xl shadow-sm outline-none transition-all"
+                >
+                  {submitting ? 'Saving...' : 'Save Assignment'}
                 </button>
               </div>
             </form>

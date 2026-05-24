@@ -76,6 +76,7 @@ export const supervisorCreateSchema = z.object({
   name: z.string().trim().min(1, 'Name is required.'),
   email: z.string().trim().email('Invalid email address.'),
   password: z.string().min(6, 'Password must be at least 6 characters.'),
+  projectId: z.string().cuid('Project ID must be a valid CUID.').optional().nullable(),
 });
 
 /**
@@ -86,6 +87,7 @@ export const supervisorUpdateSchema = z.object({
   email: z.string().trim().email('Invalid email address.').optional(),
   password: z.string().min(6, 'Password must be at least 6 characters.').optional(),
   isActive: z.boolean().optional(),
+  projectId: z.string().cuid('Project ID must be a valid CUID.').optional().nullable(),
   permissions: z.array(
     z.object({
       moduleId: z.string().cuid('Module ID must be a valid CUID.'),
@@ -95,4 +97,19 @@ export const supervisorUpdateSchema = z.object({
   ).optional(),
 });
 
-
+/**
+ * Zod validation schema for updating user profile settings
+ */
+export const profileUpdateSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required.').optional(),
+  email: z.string().trim().email('Invalid email address.').optional(),
+  currentPassword: z.string().min(1, 'Current password is required.').optional(),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters.').optional(),
+}).refine(
+  (data) => {
+    // If newPassword is provided, currentPassword must also be provided
+    if (data.newPassword && !data.currentPassword) return false;
+    return true;
+  },
+  { message: 'Current password is required when setting a new password.', path: ['currentPassword'] }
+);
