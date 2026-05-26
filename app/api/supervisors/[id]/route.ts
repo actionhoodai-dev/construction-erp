@@ -70,7 +70,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     }
 
     // 6. Run updates in a single database transaction
-    const updatedUser = await prisma.$transaction(async (tx) => {
+    const updatedUser = await prisma.$transaction(async (tx: any) => {
       // Perform base user updates
       let userRecord = targetUser;
       if (Object.keys(updateData).length > 0) {
