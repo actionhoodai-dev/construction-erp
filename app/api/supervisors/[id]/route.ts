@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hashPassword } from '@/utils/auth';
 import { logAction } from '@/utils/permissions';
 import { supervisorUpdateSchema } from '@/lib/schemas';
+
+// Derive the transaction client type from the prisma instance itself.
+// This avoids importing Prisma namespace which may not resolve on Vercel builds.
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 interface RouteContext {
   params: Promise<{
@@ -71,7 +74,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     }
 
     // 6. Run updates in a single database transaction
-    const updatedUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updatedUser = await prisma.$transaction(async (tx: TransactionClient) => {
       // Perform base user updates
       let userRecord = targetUser;
       if (Object.keys(updateData).length > 0) {

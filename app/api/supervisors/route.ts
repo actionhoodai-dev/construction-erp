@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hashPassword } from '@/utils/auth';
 import { logAction } from '@/utils/permissions';
 import { supervisorCreateSchema } from '@/lib/schemas';
+
+// Derive the transaction client type from the prisma instance itself.
+// This avoids importing Prisma namespace which may not resolve on Vercel builds.
+type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /**
  * GET - Retrieve all supervisors and their permissions (Admin only)
@@ -136,7 +139,7 @@ export async function POST(req: Request) {
     const hashedPassword = await hashPassword(password);
 
     // 6. Use database transaction to create User and initialize permissions
-    const newSupervisor = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const newSupervisor = await prisma.$transaction(async (tx: TransactionClient) => {
       // Create user
       const user = await tx.user.create({
         data: {
