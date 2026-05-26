@@ -26,10 +26,15 @@ export async function getUserPermissions(userId: string) {
       include: { module: true },
     });
 
-    return dbPermissions.reduce((acc, p) => {
-      acc[p.module.name] = { read: p.canRead, write: p.canWrite };
-      return acc;
-    }, {} as Record<string, { read: boolean; write: boolean }>);
+    type PermissionMap = Record<string, { read: boolean; write: boolean }>;
+
+    return dbPermissions.reduce(
+      (acc: PermissionMap, p: { module: { name: string }; canRead: boolean; canWrite: boolean }) => {
+        acc[p.module.name] = { read: p.canRead, write: p.canWrite };
+        return acc;
+      },
+      {} as PermissionMap
+    );
   } catch (error) {
     console.error('Failed to query user permissions:', error);
     return {};
