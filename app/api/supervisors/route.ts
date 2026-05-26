@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hashPassword } from '@/utils/auth';
@@ -135,7 +136,7 @@ export async function POST(req: Request) {
     const hashedPassword = await hashPassword(password);
 
     // 6. Use database transaction to create User and initialize permissions
-    const newSupervisor = await prisma.$transaction(async (tx) => {
+    const newSupervisor = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Create user
       const user = await tx.user.create({
         data: {

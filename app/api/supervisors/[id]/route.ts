@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { hashPassword } from '@/utils/auth';
@@ -70,7 +71,7 @@ export async function PATCH(req: Request, context: RouteContext) {
     }
 
     // 6. Run updates in a single database transaction
-    const updatedUser = await prisma.$transaction(async (tx: any) => {
+    const updatedUser = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Perform base user updates
       let userRecord = targetUser;
       if (Object.keys(updateData).length > 0) {
